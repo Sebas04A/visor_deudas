@@ -1,0 +1,537 @@
+/* ========================================
+   Variables & Theme - Premium Dark Mode
+======================================== */
+:root {
+    /* Colors - HSL for better alpha handling */
+    --hue-primary: 250; /* Indigo/Purple vibe */
+    --hue-secondary: 280; /* Violet */
+    --hue-accent: 330; /* Pinkish */
+    
+    /* Default Dark Mode Values */
+    --primary: hsl(var(--hue-primary), 90%, 65%);
+    --primary-glow: hsl(var(--hue-primary), 90%, 65%, 0.5);
+    
+    --bg-body: #030014; /* Deep space black */
+    --bg-card: rgba(255, 255, 255, 0.03);
+    --bg-card-hover: rgba(255, 255, 255, 0.07);
+    
+    --text-main: #ffffff;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --text-amount: #ffffff;
+    
+    --border-glass: rgba(255, 255, 255, 0.08);
+    --border-glass-hover: rgba(255, 255, 255, 0.15);
+    
+    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    
+    --blob-opacity: 0.4;
+    --logo-bg: rgba(255, 255, 255, 0.1);
+    --logo-color: var(--primary);
+
+    --radius-sm: 8px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --radius-xl: 32px;
+    
+    --font-main: 'Outfit', sans-serif;
+}
+
+/* Light Mode Overrides */
+[data-theme="light"] {
+    --primary: hsl(var(--hue-primary), 80%, 50%);  /* Darker indigo for white bg */
+    --primary-glow: hsl(var(--hue-primary), 80%, 50%, 0.2);
+    
+    --bg-body: #f8fafc; /* Slate 50 */
+    --bg-card: #ffffff;
+    --bg-card-hover: #ffffff;
+    
+    --text-main: #0f172a; /* Slate 900 */
+    --text-muted: #475569; /* Slate 600 */
+    --text-dim: #64748b; /* Slate 500 */
+     --text-amount: #0f172a;
+    
+    --border-glass: #e2e8f0; /* Slate 200 */
+    --border-glass-hover: #cbd5e1; /* Slate 300 */
+    
+    --shadow-glass: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    
+    --blob-opacity: 0.15; /* Much more subtle blobs */
+    --logo-bg: rgba(99, 102, 241, 0.1); /* Primary color with low opacity */
+    --logo-color: var(--primary);
+}
+
+/* ========================================
+   Reset & Base
+======================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    min-height: 100vh;
+    line-height: 1.5;
+    overflow-x: hidden;
+    position: relative;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ========================================
+   Background Effects (Blobs)
+======================================== */
+.background-effects {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: var(--blob-opacity);
+    transition: opacity 0.5s ease;
+    animation: blob-bounce 10s infinite ease-in-out alternate;
+}
+
+.blob-1 {
+    top: -10%;
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+    animation-delay: 0s;
+}
+
+.blob-2 {
+    bottom: -10%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, hsl(var(--hue-secondary), 80%, 60%) 0%, transparent 70%);
+    animation-delay: -2s;
+}
+
+.blob-3 {
+    top: 40%;
+    left: 30%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, hsl(var(--hue-accent), 80%, 60%) 0%, transparent 70%);
+    animation-delay: -4s;
+    opacity: calc(var(--blob-opacity) * 0.5);
+}
+
+@keyframes blob-bounce {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(30px, 50px) scale(1.1); }
+}
+
+/* ========================================
+   Layout
+======================================== */
+.app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    /* backdrop-filter: blur(0px); */
+}
+
+/* ========================================
+   Header
+======================================== */
+.header {
+    padding: 1.5rem;
+    padding-top: 2rem;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.logo-icon {
+    font-size: 1.5rem;
+    color: var(--logo-color);
+    background: var(--logo-bg);
+    padding: 0.5rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.logo {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    background: transparent;
+    border: 1px solid var(--border-glass);
+    color: var(--text-main);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--bg-card-hover);
+}
+
+.main {
+    flex: 1;
+    padding: 0 1.5rem 2rem;
+    width: 100%;
+}
+
+/* ========================================
+   User Greeting
+======================================== */
+.user-greeting {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.greeting-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.greeting-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+#debtor-name {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* ========================================
+   Balance Card (Minimalist)
+======================================== */
+.balance-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-glass);
+    margin-bottom: 2.5rem;
+    transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncier & longer */
+    
+    /* Scroll Reveal Initial State - More visible */
+    opacity: 0;
+    transform: translateY(50px) scale(0.95);
+    
+    /* Glassmorphism restoration */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.balance-card.reveal {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* More Visible Shine Animation */
+.balance-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 150%; /* Wider shine */
+    height: 100%;
+    background: linear-gradient(
+        to right,
+        transparent,
+        rgba(255, 255, 255, 0.15), 
+        transparent
+    );
+    transform: skewX(-25deg);
+    pointer-events: none;
+    transition: left 0.5s ease;
+}
+
+.balance-card:hover::before {
+    animation: shine 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes shine {
+    0% { left: -150%; }
+    100% { left: 150%; }
+}
+
+.balance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.balance-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.balance-amount-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+/* removed .debt-icon-container and .currency */
+
+.total-amount {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-amount);
+    letter-spacing: -2px;
+}
+
+.balance-footer {
+    border-top: 1px solid var(--border-glass);
+    padding-top: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.balance-footer::before {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
+    background-color: var(--primary);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--primary);
+}
+
+/* ========================================
+   Debts List
+======================================== */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.badge {
+    font-size: 0.75rem;
+    background: var(--bg-card);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    color: var(--text-muted);
+    border: 1px solid var(--border-glass);
+    font-weight: 500;
+}
+
+.debts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.debt-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+    cursor: default;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02); /* subtle shadow */
+    
+    /* Scroll Reveal Initial State - More visible */
+    opacity: 0;
+    transform: translateY(40px);
+}
+
+.debt-card.reveal {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.debt-card:hover {
+    transform: translateY(-2px);
+    background: var(--bg-card-hover);
+    border-color: var(--border-glass-hover);
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+.debt-info {
+    flex: 1;
+}
+
+.debt-title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    color: var(--text-main);
+}
+
+.debt-date {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* removed .debt-icon-container */
+
+.debt-amount {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-amount);
+}
+
+/* ========================================
+   States (Loading / Error)
+======================================== */
+.state-container {
+    padding: 4rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.5rem;
+}
+
+.loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-glass);
+    border-radius: 50%;
+    border-top-color: var(--primary);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.icon-box {
+    width: 64px;
+    height: 64px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.icon-box.error {
+    color: #ef4444;
+}
+
+.state-container h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.state-container p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ========================================
+   Footer
+======================================== */
+.footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: auto;
+}
+
+.footer i {
+    vertical-align: middle;
+    margin-left: 0.25rem;
+}
+
+/* ========================================
+   Empty State (in list)
+======================================== */
+.empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+    /* Removed border/bg for minimalist feel, just text and icon */
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+}
+
+/* ========================================
+   Animations
+======================================== */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
