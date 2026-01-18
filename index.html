@@ -64,6 +64,9 @@
                     </div>
                 </section>
 
+                <!-- Credit Container -->
+                <div id="credit-container" class="hidden" style="margin-bottom: 2rem;"></div>
+
                 <!-- Total Balance Card -->
                 <section class="balance-card">
                     <div class="balance-header">
@@ -77,14 +80,39 @@
                     </div>
                 </section>
 
-                <!-- Debts List -->
-                <section class="debts-section">
+                <!-- Debts List (Pending View) -->
+                <section id="pending-view" class="view-section active">
                     <div class="section-header">
-                        <h3 class="section-title">Movimientos</h3>
-                        <span class="badge" id="debt-count">0</span>
+                        <div class="header-left">
+                            <h3 class="section-title">Movimientos</h3>
+                            <span class="badge" id="debt-count">0</span>
+                        </div>
+                        <button id="view-history-btn" class="header-action-btn" title="Ver Historial Completo">
+                            <i class="ri-history-line"></i>
+                        </button>
                     </div>
                     <div id="debts-list" class="debts-list">
                         <!-- Debts will be inserted here -->
+                    </div>
+                </section>
+                
+                <!-- History List (History View) -->
+                <section id="history-view" class="view-section hidden">
+                    <div class="section-header">
+                        <button id="back-btn" class="header-action-btn back-btn">
+                            <i class="ri-arrow-left-line"></i>
+                            Volver
+                        </button>
+                        <h3 class="section-title">Historial</h3>
+                    </div>
+                    
+                    <!-- History Loader -->
+                    <div id="history-loading" class="state-container hidden" style="padding: 2rem;">
+                         <div class="loader" style="width: 30px; height: 30px; border-width: 2px;"></div>
+                    </div>
+                    
+                    <div id="history-list" class="debts-list">
+                        <!-- History will be inserted here -->
                     </div>
                 </section>
             </div>
