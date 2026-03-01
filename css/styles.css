@@ -34,6 +34,17 @@
     --radius-lg: 24px;
     --radius-xl: 32px;
     
+    --progress-track-bg: rgba(255, 255, 255, 0.06);
+    --progress-track-border: rgba(255, 255, 255, 0.08);
+    --progress-tip-bg: #fff;
+    --progress-tip-glow: rgba(255, 255, 255, 1);
+    
+    --glass-015: rgba(255, 255, 255, 0.015);
+    --glass-02: rgba(255, 255, 255, 0.02);
+    --glass-03: rgba(255, 255, 255, 0.03);
+    --glass-05: rgba(255, 255, 255, 0.05);
+    --glass-inverted: rgba(0, 0, 0, 0.15);
+
     --font-main: 'Outfit', sans-serif;
 }
 
@@ -54,6 +65,17 @@
     --border-glass: #e2e8f0; /* Slate 200 */
     --border-glass-hover: #cbd5e1; /* Slate 300 */
     
+    --progress-track-bg: rgba(0, 0, 0, 0.06);
+    --progress-track-border: rgba(0, 0, 0, 0.08);
+    --progress-tip-bg: #ffffff;
+    --progress-tip-glow: rgba(0, 0, 0, 0.1);
+    
+    --glass-015: rgba(0, 0, 0, 0.015);
+    --glass-02: rgba(0, 0, 0, 0.02);
+    --glass-03: rgba(0, 0, 0, 0.03);
+    --glass-05: rgba(0, 0, 0, 0.05);
+    --glass-inverted: rgba(255, 255, 255, 0.5);
+
     --shadow-glass: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     
     --blob-opacity: 0.15; /* Much more subtle blobs */
@@ -738,8 +760,27 @@ body {
     width: 4px;
 }
 
-.history-card.type-deuda::before { background-color: #ef4444; }
-.history-card.type-pago::before { background-color: #10b981; }
+
+.history-card.type-deuda::before {
+    background-color: var(--card-accent-color, #ef4444);
+    width: 6px;
+}
+
+.history-card.type-pago {
+    border-radius: 20px;
+    padding: 1rem;
+    background: rgba(255,255,255,0.02);
+}
+.history-card.type-pago::before { display: none; }
+
+.history-card.is-cruce {
+    background: transparent;
+    border: 1px dashed rgba(59, 130, 246, 0.4);
+    box-shadow: none;
+    align-items: center;
+    border-radius: 16px;
+}
+.history-card.is-cruce::before { display: none; }
 
 .history-header {
     display: flex;
