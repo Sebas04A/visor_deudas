@@ -152,7 +152,7 @@ async function fetchFullHistory(debtorId) {
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
             'apikey': SUPABASE_ANON_KEY
         },
-        body: JSON.stringify({ deudor_id: debtorId })
+        body: JSON.stringify({ deudor_id: debtorId, pov: 'debtor' })
     });
 
     if (!response.ok) {
@@ -160,22 +160,16 @@ async function fetchFullHistory(debtorId) {
         throw new Error('Error fetching full history');
     }
 
-    const groupedData = await response.json();
-    
-    // The edge function returning dates might need parsing (e.g., createdAt is timestamp)
-    // We convert string dates or timestamps to Date objects for the renderer
-    groupedData.forEach(g => {
-        g.pagos.forEach(p => {
-            p.date = new Date(p.date + 'T12:00:00'); 
-            p.createdAt = new Date(p.createdAt); 
-        });
-        g.deudas.forEach(d => {
-            d.date = new Date(d.date + 'T12:00:00');
-            d.createdAt = new Date(d.createdAt);
-        });
+    // La Edge Function ahora devuelve una LISTA PLANA cronológica descendente
+    // (presente → pasado), con pagos ARRIBA de las deudas que abonaron.
+    const items = await response.json();
+
+    items.forEach(it => {
+        it.date = new Date(it.date + 'T12:00:00');
+        it.createdAt = new Date(it.createdAt);
     });
 
-    return groupedData;
+    return items;
 }
 
 function renderHistoryItem(item) {
@@ -278,8 +272,28 @@ function renderHistoryItem(item) {
             `;
         }
 
-        const cardBg = isBeneficialForDebtor 
-            ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.02) 100%)' 
+        // Parciales: deudas que quedaron PARCIALMENTE cubiertas tras este pago (ámbar)
+        let parcialesHtml = '';
+        if (item.parciales && item.parciales.length > 0) {
+            let filas = '';
+            item.parciales.forEach(pc => {
+                filas += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.8rem;">
+                        <span style="color: #fbbf24;"><i class="ri-error-warning-line" style="margin-right: 4px;"></i>${escapeHtml(pc.titulo)} — parcial</span>
+                        <span style="color: #f59e0b; font-weight: 700;">queda ${formatCurrency(pc.saldo)}</span>
+                    </div>
+                `;
+            });
+            parcialesHtml = `
+                <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed rgba(245, 158, 11, 0.35);">
+                    <div style="font-size: 0.65rem; color: #f59e0b; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Deudas parcialmente cubiertas</div>
+                    ${filas}
+                </div>
+            `;
+        }
+
+        const cardBg = isBeneficialForDebtor
+            ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.02) 100%)'
             : 'linear-gradient(90deg, rgba(244, 63, 94, 0.15) 0%, rgba(244, 63, 94, 0.02) 100%)';
         const cardBorderColor = isBeneficialForDebtor ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)';
 
@@ -305,6 +319,7 @@ function renderHistoryItem(item) {
                 </div>
             </div>
             ${cruceHtml}
+            ${parcialesHtml}
         </div>
         `;
     } else {
@@ -347,106 +362,18 @@ function renderHistoryItem(item) {
     }
 }
 
-function renderHistory(groups) {
-    if (groups.length === 0) {
+function renderHistory(items) {
+    if (!items || items.length === 0) {
         historyListEl.innerHTML = `
             <div class="empty-state"><p>No hay historial disponible</p></div>
         `;
         return;
     }
 
+    // Lista plana cronológica descendente (presente → pasado): los pagos ya vienen
+    // ARRIBA de las deudas que abonaron. Se recorre directo, sin agrupar.
     let html = '';
-
-    groups.forEach((group) => {
-        let groupTitleDate = '';
-        if (group.pagos.length > 0) {
-            const lastPago = group.pagos[0];
-            const _d = new Date(lastPago.date);
-            let wDay = _d.toLocaleDateString('es-EC', {weekday: 'short'}).replace('.', '');
-            let day = _d.getDate();
-            let month = _d.toLocaleDateString('es-EC', {month: 'short'}).replace('.', '');
-            let year = _d.getFullYear();
-            groupTitleDate = `${wDay.charAt(0).toUpperCase() + wDay.slice(1)}, ${day} ${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
-        } else if (group.deudas.length > 0) {
-            // Unlikely to just be deudas unless no pagos ever made for these initially. If so:
-            const firstDeuda = group.deudas[0];
-            const _d = new Date(firstDeuda.date);
-            let month = _d.toLocaleDateString('es-EC', {month: 'short'}).replace('.', '');
-            groupTitleDate = `${_d.getDate()} ${month.charAt(0).toUpperCase() + month.slice(1)} ${_d.getFullYear()}`;
-        }
-
-        let deudasVal = group.totalDeudas || 0;
-        let deudasSign = deudasVal > 0 ? '+' : (deudasVal < 0 ? '-' : '');
-        let deudasColor = deudasVal > 0 ? '#10b981' : (deudasVal < 0 ? '#f43f5e' : 'var(--text-dim)');
-        let totalDeudasFormatted = deudasSign + formatCurrency(Math.abs(deudasVal));
-
-        let pagosVal = group.totalPagos || 0;
-        let pagosSign = pagosVal > 0 ? '+' : (pagosVal < 0 ? '-' : '');
-        let pagosColor = pagosVal > 0 ? '#10b981' : (pagosVal < 0 ? '#f43f5e' : 'var(--text-dim)');
-        let totalPagosFormatted = pagosSign + formatCurrency(Math.abs(pagosVal));
-
-        const debtorBalanceAnterior = -(group.saldoAnterior || 0);
-        const saldoAnteriorSign = debtorBalanceAnterior > 0 ? '+' : (debtorBalanceAnterior < 0 ? '-' : '');
-        const saldoAnteriorFormatted = formatCurrency(Math.abs(debtorBalanceAnterior));
-
-        const debtorBalance = -group.saldoPosterior;
-        const saldoSign = debtorBalance > 0 ? '+' : (debtorBalance < 0 ? '-' : '');
-        const saldoFormatted = formatCurrency(Math.abs(debtorBalance));
-
-        let saldoAnteriorHtml = '';
-        if (group.saldoAnterior !== undefined && debtorBalanceAnterior !== 0) {
-            saldoAnteriorHtml = `
-                    <div>
-                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Saldo Anterior</div>
-                        <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 700; line-height: 1;">${saldoAnteriorSign}${saldoAnteriorFormatted}</div>
-                    </div>
-            `;
-        } else {
-             saldoAnteriorHtml = `
-                    <div>
-                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Saldo Anterior</div>
-                        <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 700; line-height: 1;">$0,00</div>
-                    </div>
-            `;
-        }
-
-        html += `
-        <div class="history-group" style="margin-bottom: 32px; border-bottom: 1px dashed var(--glass-05); padding-bottom: 16px;">
-            ${groupTitleDate ? `
-            <div style="display: flex; align-items: center; gap: 12px; margin: 8px 8px 16px 8px;">
-                <span style="color: var(--text-dim); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">GRUPO DEL ${groupTitleDate}</span>
-                <div style="flex: 1; height: 1px; background: var(--glass-05); border-radius: 1px;"></div>
-            </div>
-            ` : ''}
-            
-            <div style="background: var(--glass-02); border: 1px solid var(--border-glass); border-radius: 16px; padding: 12px 16px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                    ${saldoAnteriorHtml}
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Saldo Posterior</div>
-                        <div style="font-size: 1rem; font-weight: 800; color: var(--text-main); line-height: 1;">${saldoSign}${saldoFormatted}</div>
-                    </div>
-                </div>
-                <div style="height: 1px; background: var(--glass-05); margin-bottom: 12px;"></div>
-                <div style="display: flex; justify-content: space-between;">
-                    <div>
-                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Deudas del grupo</div>
-                        <div style="font-size: 0.95rem; color: ${deudasColor}; font-weight: 800; line-height: 1;">${totalDeudasFormatted}</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Pagos del grupo</div>
-                        <div style="font-size: 0.95rem; color: ${pagosColor}; font-weight: 800; line-height: 1;">${totalPagosFormatted}</div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        group.pagos.forEach(item => { html += renderHistoryItem(item); });
-        group.deudas.forEach(item => { html += renderHistoryItem(item); });
-        
-        html += `</div>`;
-    });
-
+    items.forEach(item => { html += renderHistoryItem(item); });
     historyListEl.innerHTML = html;
 }
 
@@ -683,7 +610,7 @@ async function init() {
         
         updateBalanceCard(estadoCuenta.resumen);
 
-        renderCredit(estadoCuenta.resumen.saldo_favor_disponible);
+        renderCredit(estadoCuenta.resumen.saldo_favor);
         renderDebts(estadoCuenta.deudas_pendientes);
         
         showContent();
