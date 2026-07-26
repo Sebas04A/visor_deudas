@@ -454,10 +454,14 @@ function renderDebts(debts) {
     debtsListEl.innerHTML = debts.map((debt, index) => {
         const montoOriginal = parseFloat(debt.monto_original);
         const compensado = debt.cruce_sugerido || 0;
+        // Saldo a favor ya entregado que abona esta deuda: se descuenta igual que un
+        // cruce, pero se etiqueta aparte porque es dinero real, no una compensación.
+        const abonoFavor = debt.abono_saldo_favor || 0;
+        const descuento = compensado + abonoFavor;
         const esParcial = parseFloat(debt.monto_pagado) > 0;
-        const saldoReal = debt.saldo_pendiente - compensado;
-        
-        const isFullyCrossed = (debt.saldo_pendiente - compensado <= 0.01) && compensado > 0;
+        const saldoReal = debt.saldo_pendiente - descuento;
+
+        const isFullyCrossed = (saldoReal <= 0.01) && descuento > 0;
         const opacityStyle = isFullyCrossed ? 'opacity: 0.4;' : '';
          const tagBg = debt.es_tu_deuda ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
          const tagColor = debt.es_tu_deuda ? '#ef4444' : '#10b981';
@@ -481,12 +485,15 @@ function renderDebts(debts) {
                  </div>
                  
                   <div class="debt-main-amount" style="align-items: flex-end; justify-content: center;">
-                     ${(compensado > 0 && !isFullyCrossed) ? `
+                     ${(descuento > 0 && !isFullyCrossed) ? `
                      <span style="font-size: 0.75rem; text-decoration: line-through; color: var(--text-dim);">${amountPrefix}${formatCurrency(debt.saldo_pendiente)}</span>
                      ` : ''}
                      <span class="debt-amount-value" style="font-size: 1.25rem; color: ${amountColor}; line-height: 1;">
                          ${isFullyCrossed ? (amountPrefix + formatCurrency(debt.saldo_pendiente)) : (amountPrefix + formatCurrency(saldoReal))}
                      </span>
+                     ${abonoFavor > 0 ? `
+                     <span style="font-size: 0.7rem; color: #3b82f6; font-weight: 800; margin-top: 4px;">-${formatCurrency(abonoFavor)} (saldo a favor)</span>
+                     ` : ''}
                      ${compensado > 0 ? `
                      <span style="font-size: 0.7rem; color: #3b82f6; font-weight: 800; margin-top: 4px;">-${formatCurrency(compensado)} (cruce)</span>
                      ` : ''}
