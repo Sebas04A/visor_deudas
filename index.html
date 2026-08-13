@@ -106,11 +106,18 @@
                         <h3 class="section-title">Historial</h3>
                     </div>
                     
+                    <!-- Buscador del historial -->
+                    <div id="history-search-box" class="history-search hidden">
+                        <i class="ri-search-line"></i>
+                        <input id="history-search" type="search" placeholder="Buscar una deuda o un pago…"
+                               autocomplete="off" spellcheck="false">
+                    </div>
+
                     <!-- History Loader -->
                     <div id="history-loading" class="state-container hidden" style="padding: 2rem;">
                          <div class="loader" style="width: 30px; height: 30px; border-width: 2px;"></div>
                     </div>
-                    
+
                     <div id="history-list" class="debts-list">
                         <!-- History will be inserted here -->
                     </div>

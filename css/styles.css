@@ -39,6 +39,13 @@
     --progress-tip-bg: #fff;
     --progress-tip-glow: rgba(255, 255, 255, 1);
     
+    /* Lo que se debe. Un rojo de alarma no ayuda a quien abre esto: se usa un tono
+       terracota apagado, que sigue leyéndose como "esto está en tu contra" sin gritar.
+       El verde de lo positivo no cambia, así que el contraste entre los dos se mantiene. */
+    --debe: #d99a92;
+    --debe-soft: rgba(217, 154, 146, 0.14);
+    --debe-line: rgba(217, 154, 146, 0.18);
+
     --glass-015: rgba(255, 255, 255, 0.015);
     --glass-02: rgba(255, 255, 255, 0.02);
     --glass-03: rgba(255, 255, 255, 0.03);
@@ -70,6 +77,11 @@
     --progress-tip-bg: #ffffff;
     --progress-tip-glow: rgba(0, 0, 0, 0.1);
     
+    /* Sobre blanco hay que bajar el tono para que se lea, no subir la saturación. */
+    --debe: #a35f57;
+    --debe-soft: rgba(163, 95, 87, 0.10);
+    --debe-line: rgba(163, 95, 87, 0.16);
+
     --glass-015: rgba(0, 0, 0, 0.015);
     --glass-02: rgba(0, 0, 0, 0.02);
     --glass-03: rgba(0, 0, 0, 0.03);
@@ -762,7 +774,7 @@ body {
 
 
 .history-card.type-deuda::before {
-    background-color: var(--card-accent-color, #ef4444);
+    background-color: var(--card-accent-color, var(--debe));
     width: 6px;
 }
 
@@ -819,4 +831,53 @@ body {
 .history-balance-value { 
     font-weight: 700; 
     color: var(--text-main);
+}
+
+/* ========================================
+   Buscador del historial
+======================================== */
+.history-search {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    padding: 0.7rem 0.9rem;
+    margin-bottom: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.history-search:focus-within {
+    border-color: var(--border-glass-hover);
+}
+
+.history-search i {
+    color: var(--text-dim);
+    font-size: 1.05rem;
+}
+
+.history-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-main);
+    font-family: var(--font-main);
+    font-size: 0.95rem;
+}
+
+.history-search input::placeholder {
+    color: var(--text-dim);
+}
+
+/* La X nativa de <input type="search"> en Chrome es casi invisible en oscuro. */
+.history-search input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--text-dim);
+    mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z'/></svg>") center/contain no-repeat;
+    cursor: pointer;
 }

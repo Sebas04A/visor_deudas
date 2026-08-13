@@ -23,6 +23,8 @@ const themeIcon = document.getElementById('theme-icon');
 const viewHistoryBtn = document.getElementById('view-history-btn');
 const backBtn = document.getElementById('back-btn');
 const historyLoadingEl = document.getElementById('history-loading');
+const historySearchBox = document.getElementById('history-search-box');
+const historySearchEl = document.getElementById('history-search');
 const pendingView = document.getElementById('pending-view');
 const historyView = document.getElementById('history-view');
 
@@ -172,9 +174,9 @@ async function fetchFullHistory(debtorId) {
     return items;
 }
 
-function renderHistoryItem(item) {
+function renderHistoryItem(item, tomadas) {
     const isBeneficialForDebtor = item.type === 'deuda' ? item.esMiDeuda : item.esMiPago;
-    const cardColor = isBeneficialForDebtor ? '#10b981' : '#f43f5e';
+    const cardColor = isBeneficialForDebtor ? '#10b981' : 'var(--debe)';
     const sign = isBeneficialForDebtor ? '+' : '-';
     
     const today = new Date();
@@ -236,7 +238,7 @@ function renderHistoryItem(item) {
                 item.linkedCruceDetails.forEach(det => {
                     const deudasObj = det.deudas || {};
                     const signC = deudasObj.es_mi_deuda ? '+' : '-';
-                    const colorC = deudasObj.es_mi_deuda ? '#10b981' : '#f43f5e';
+                    const colorC = deudasObj.es_mi_deuda ? '#10b981' : 'var(--debe)';
                     const nameC = deudasObj.titulo || 'Deuda sin título';
                     const elementHtml = `
                         <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.8rem;">
@@ -249,7 +251,7 @@ function renderHistoryItem(item) {
                 });
                 detailsListHtml = `
                     <div id="${randomId}" style="display: none; padding-top: 12px; margin-top: 12px; border-top: 1px dashed var(--glass-05);">
-                        ${debitsHtml ? `<div style="margin-bottom: 8px;"><div style="font-size: 0.65rem; color: #f43f5e; font-weight: 700; margin-bottom: 4px; text-transform: uppercase;">Abonando deudas suyas con tu dinero</div>${debitsHtml}</div>` : ''}
+                        ${debitsHtml ? `<div style="margin-bottom: 8px;"><div style="font-size: 0.65rem; color: var(--debe); font-weight: 700; margin-bottom: 4px; text-transform: uppercase;">Abonando deudas suyas con tu dinero</div>${debitsHtml}</div>` : ''}
                         ${creditsHtml ? `<div><div style="font-size: 0.65rem; color: #10b981; font-weight: 700; margin-bottom: 4px; text-transform: uppercase;">Gastando dinero suyo a tu favor</div>${creditsHtml}</div>` : ''}
                     </div>
                 `;
@@ -272,11 +274,15 @@ function renderHistoryItem(item) {
             `;
         }
 
-        // Parciales: deudas que quedaron PARCIALMENTE cubiertas tras este pago (ámbar)
+        // Parciales: deudas que quedaron PARCIALMENTE cubiertas tras este pago (ámbar).
+        // Las que siguen vivas ya se muestran arriba, en "Sin pagar todavía", así que aquí
+        // solo quedarían las que otro pago posterior terminó de cerrar.
+        const parciales = (item.parciales || []).filter(
+            pc => !tomadas || tomadas.has(pc.deuda_id));
         let parcialesHtml = '';
-        if (item.parciales && item.parciales.length > 0) {
+        if (parciales.length > 0) {
             let filas = '';
-            item.parciales.forEach(pc => {
+            parciales.forEach(pc => {
                 filas += `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.8rem;">
                         <span style="color: #fbbf24;"><i class="ri-error-warning-line" style="margin-right: 4px;"></i>${escapeHtml(pc.titulo)} — parcial</span>
@@ -294,8 +300,8 @@ function renderHistoryItem(item) {
 
         const cardBg = isBeneficialForDebtor
             ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.02) 100%)'
-            : 'linear-gradient(90deg, rgba(244, 63, 94, 0.15) 0%, rgba(244, 63, 94, 0.02) 100%)';
-        const cardBorderColor = isBeneficialForDebtor ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)';
+            : 'linear-gradient(90deg, var(--debe-soft) 0%, transparent 100%)';
+        const cardBorderColor = isBeneficialForDebtor ? 'rgba(16, 185, 129, 0.15)' : 'var(--debe-line)';
 
         return `
         <div class="history-card" style="background: ${cardBg}; border: 1px solid ${cardBorderColor}; border-radius: 16px; padding: 16px; margin-bottom: 12px;">
@@ -323,7 +329,7 @@ function renderHistoryItem(item) {
         </div>
         `;
     } else {
-        const esParcial = item.montoPagado > 0 && item.montoPagado < item.amount;
+        const esParcial = item.montoPagado > 0 && item.montoPagado < item.amount - 0.01;
         let progressHtml = '';
         if (esParcial) {
             progressHtml = `
@@ -331,8 +337,9 @@ function renderHistoryItem(item) {
                 <div class="progress-track">
                     <div class="progress-fill" style="width: ${(item.montoPagado / item.amount) * 100}%; background: ${cardColor};"></div>
                 </div>
-                <div style="font-size: 0.75rem; color: ${cardColor}; font-weight: 600; margin-top: 6px;">
-                    Abonado: ${formatCurrency(item.montoPagado)}
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; margin-top: 6px;">
+                    <span style="color: ${cardColor};">Abonado: ${formatCurrency(item.montoPagado)}</span>
+                    <span style="color: #f59e0b;">Falta: ${formatCurrency(item.amount - item.montoPagado)}</span>
                 </div>
             </div>
             `;
@@ -362,7 +369,67 @@ function renderHistoryItem(item) {
     }
 }
 
-function renderHistory(items) {
+/**
+ * Reorganiza la lista plana: cada deuda SALDADA se cuelga del pago que la terminó, y
+ * todo lo que sigue debiéndose sube arriba del todo hasta que un pago lo cierre.
+ *
+ * La lista viene presente→pasado, así que el primer pago que toca una deuda es el más
+ * reciente: ese es el que la cerró. Una deuda pagada a plazos aparece una sola vez.
+ */
+function agruparHistorial(items) {
+    const deudaPorId = new Map();
+    items.forEach(it => { if (it.type === 'deuda') deudaPorId.set(it.id, it); });
+
+    const saldada = d => (d.montoPagado || 0) >= d.amount - 0.01;
+    const tomadas = new Set();
+    const colgadas = new Map();
+
+    items.forEach(it => {
+        if (it.type !== 'pago') return;
+        const mias = [];
+        (it.detalles || []).forEach(det => {
+            const d = deudaPorId.get(det.deuda_id);
+            if (!d || tomadas.has(det.deuda_id) || !saldada(d)) return;
+            tomadas.add(det.deuda_id);
+            mias.push(d);
+        });
+        if (mias.length > 0) colgadas.set(it.id, mias);
+    });
+
+    const pendientes = items.filter(it => it.type === 'deuda' && !tomadas.has(it.id));
+    return { colgadas, pendientes, tomadas };
+}
+
+function renderSeparador(texto, color) {
+    const c = color || 'var(--text-muted)';
+    return `
+        <div style="display: flex; align-items: center; gap: 10px; margin: 18px 2px 12px;">
+            <div style="height: 1px; flex: 1; background: var(--glass-05);"></div>
+            <span style="font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: ${c};">${texto}</span>
+            <div style="height: 1px; flex: 1; background: var(--glass-05);"></div>
+        </div>
+    `;
+}
+
+/** Texto normalizado (sin tildes ni mayúsculas) para que buscar "cafe" encuentre "Café". */
+function normalizar(txt) {
+    return String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function coincide(item, q) {
+    if (!q) return true;
+    return normalizar(item.title).includes(q) ||
+           normalizar(formatCurrency(item.amount)).includes(q) ||
+           normalizar(item.date.toLocaleDateString('es-EC',
+               { day: 'numeric', month: 'long', year: 'numeric' })).includes(q);
+}
+
+let historialItems = null;
+
+function renderHistory(items, query) {
+    if (items) historialItems = items;
+    items = historialItems;
+
     if (!items || items.length === 0) {
         historyListEl.innerHTML = `
             <div class="empty-state"><p>No hay historial disponible</p></div>
@@ -370,10 +437,58 @@ function renderHistory(items) {
         return;
     }
 
-    // Lista plana cronológica descendente (presente → pasado): los pagos ya vienen
-    // ARRIBA de las deudas que abonaron. Se recorre directo, sin agrupar.
+    const q = normalizar(query);
+
+    // Ya no es una lista plana por fecha: primero lo que sigue vivo, y después cada pago
+    // con las deudas que saldó justo debajo.
+    const { colgadas, pendientes, tomadas } = agruparHistorial(items);
     let html = '';
-    items.forEach(item => { html += renderHistoryItem(item); });
+    let encontrados = 0;
+
+    // Buscar no rompe la agrupación: un pago que coincide se muestra con todas sus deudas,
+    // y una deuda que coincide arrastra al pago que la saldó para no perder el contexto.
+    const pendientesVisibles = pendientes.filter(d => coincide(d, q));
+    if (pendientesVisibles.length > 0) {
+        const falta = pendientesVisibles.reduce(
+            (s, d) => s + Math.max(0, d.amount - (d.montoPagado || 0)), 0);
+        html += renderSeparador(
+            `Sin pagar todavía · ${pendientesVisibles.length} deuda${pendientesVisibles.length === 1 ? '' : 's'} · ${formatCurrency(falta)}`,
+            '#f59e0b');
+        pendientesVisibles.forEach(d => { html += renderHistoryItem(d, tomadas); });
+        html += renderSeparador('Ya saldado');
+        encontrados += pendientesVisibles.length;
+    }
+
+    items.forEach(item => {
+        // Las deudas ya se ubicaron: o están arriba, o cuelgan de su pago.
+        if (item.type === 'deuda') return;
+
+        const hijas = colgadas.get(item.id) || [];
+        const pagoCoincide = coincide(item, q);
+        const hijasVisibles = pagoCoincide ? hijas : hijas.filter(d => coincide(d, q));
+        if (!pagoCoincide && hijasVisibles.length === 0) return;
+
+        encontrados += (pagoCoincide ? 1 : 0) + hijasVisibles.length;
+        html += renderHistoryItem(item, tomadas);
+        if (hijasVisibles.length === 0) return;
+
+        const rotulo = q && !pagoCoincide
+            ? `${hijasVisibles.length} de sus ${hijas.length} deudas`
+            : `Saldó ${hijas.length === 1 ? 'esta deuda' : `estas ${hijas.length} deudas`}`;
+        html += `
+            <div style="margin: -4px 0 12px 16px; padding-left: 14px; border-left: 2px solid var(--glass-05);">
+                <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin: 4px 0 10px;">
+                    ${rotulo}
+                </div>
+                ${hijasVisibles.map(d => renderHistoryItem(d, tomadas)).join('')}
+            </div>
+        `;
+    });
+
+    if (encontrados === 0) {
+        html = `<div class="empty-state"><p>Nada coincide con "${escapeHtml(query)}"</p></div>`;
+    }
+
     historyListEl.innerHTML = html;
 }
 
@@ -410,7 +525,7 @@ function updateBalanceCard(resumen) {
 
     const totalNeto = resumen.total_deuda;
     const isDebtorOwing = totalNeto < 0; 
-    const headerColor = isDebtorOwing ? '#ef4444' : (totalNeto > 0 ? '#10b981' : 'var(--text-secondary)');
+    const headerColor = isDebtorOwing ? 'var(--debe)' : (totalNeto > 0 ? '#10b981' : 'var(--text-secondary)');
     const headerText = totalNeto !== 0 ? (isDebtorOwing ? "DEBES ABONAR" : "TE DEBEN ABONAR") : "TODO COMPENSADO";
 
     let html = `
@@ -463,13 +578,13 @@ function renderDebts(debts) {
 
         const isFullyCrossed = (saldoReal <= 0.01) && descuento > 0;
         const opacityStyle = isFullyCrossed ? 'opacity: 0.4;' : '';
-         const tagBg = debt.es_tu_deuda ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
-         const tagColor = debt.es_tu_deuda ? '#ef4444' : '#10b981';
+         const tagBg = debt.es_tu_deuda ? 'var(--debe-soft)' : 'rgba(16,185,129,0.15)';
+         const tagColor = debt.es_tu_deuda ? 'var(--debe)' : '#10b981';
          const tagText = debt.es_tu_deuda ? 'TÚ DEBES' : 'TE DEBEN';
 
-         const amountColor = isFullyCrossed ? 'var(--text-secondary)' : (debt.es_tu_deuda ? '#ef4444' : '#10b981');
+         const amountColor = isFullyCrossed ? 'var(--text-secondary)' : (debt.es_tu_deuda ? 'var(--debe)' : '#10b981');
          const amountPrefix = debt.es_tu_deuda ? '-' : '+';
-         const titleStyle = isFullyCrossed ? 'color: var(--text-secondary);' : (debt.es_tu_deuda ? 'color: #ef4444;' : 'color: #10b981;');
+         const titleStyle = isFullyCrossed ? 'color: var(--text-secondary);' : (debt.es_tu_deuda ? 'color: var(--debe);' : 'color: #10b981;');
 
         return `
         <div class="debt-card ${esParcial ? 'is-partial' : ''}" style="${opacityStyle} ${isFullyCrossed ? 'background: var(--glass-02); border-color: var(--glass-05); box-shadow: none;' : ''}">
@@ -576,6 +691,7 @@ viewHistoryBtn.addEventListener('click', async () => {
         try {
             const historyItems = await fetchFullHistory(currentDebtorId);
             renderHistory(historyItems);
+            historySearchBox.classList.remove('hidden');
             historyLoaded = true;
         } catch (e) {
             console.error(e);
@@ -584,6 +700,11 @@ viewHistoryBtn.addEventListener('click', async () => {
             historyLoadingEl.classList.add('hidden');
         }
     }
+});
+
+// El historial ya está entero en memoria, así que buscar es solo volver a pintarlo.
+historySearchEl.addEventListener('input', () => {
+    renderHistory(null, historySearchEl.value.trim());
 });
 
 backBtn.addEventListener('click', () => {
