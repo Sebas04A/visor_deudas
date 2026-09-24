@@ -1,9 +1,17 @@
 // ========================================
 // Configuración de Supabase
 // ========================================
-// IMPORTANTE: Reemplazar con tus credenciales de Supabase
-const SUPABASE_URL = 'https://rcmdzvbxerumzxvnubfo.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_CZL2FVo5YLTnUPeyAq7S-w_lfExK_yw';
+// Deudas v2: el visor solo habla con la edge `visor`, que recibe el token del enlace y
+// resuelve el deudor en el servidor. Ya no lee tablas ni manda ids.
+// Fuera de localhost habla con el proyecto Supabase "Deudas v2" (ref ggzvxehcsorlbroucbkp):
+// esta rama se publica en el corte (deudas/PLAN_MULTIUSUARIO.md, fase 3). En localhost
+// apunta al stack local (`supabase start` en deudas/v2), cuya key es la de demostración
+// que trae la CLI, igual en todas las instalaciones. Las dos keys son públicas por diseño.
+const EN_LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
+const SUPABASE_URL = EN_LOCAL ? 'http://127.0.0.1:54321' : 'https://ggzvxehcsorlbroucbkp.supabase.co';
+const SUPABASE_ANON_KEY = EN_LOCAL
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+    : 'sb_publishable_cfy6rxzisHkkVw-QnmLx7w_FlTk1iaL';
 
 // ========================================
 // Elementos del DOM
@@ -106,65 +114,44 @@ function showContent() {
 // ========================================
 // API Supabase
 // ========================================
-async function fetchDebtorByToken(token) {
-    const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/deudores?token=eq.${token}&select=*`,
-        {
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            }
-        }
-    );
-    
-    if (!response.ok) throw new Error('Error fetching debtor');
-    
-    const data = await response.json();
-    return data.length > 0 ? data[0] : null;
+// Una sola puerta: POST /functions/v1/visor { token, accion }. Un enlace inválido o
+// vencido responde 404.
+async function pedirVisor(token, accion) {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/visor`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ token, accion })
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Error en el visor (${accion})`);
+    return response.json();
 }
 
-async function fetchEstadoCuenta(debtorId) {
-    const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/get_estado_cuenta`,
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            },
-            body: JSON.stringify({ deudor_id: debtorId, pov: 'debtor' })
-        }
-    );
-    
-    if (!response.ok) throw new Error('Error fetching estado_cuenta');
-    
-    return response.json();
+// Devuelve { nombre, moneda } o null si el enlace no vale.
+async function fetchDebtorByToken(token) {
+    return pedirVisor(token, 'deudor');
+}
+
+async function fetchEstadoCuenta(token) {
+    const estado = await pedirVisor(token, 'estado');
+    if (!estado) throw new Error('Enlace inválido');
+    return estado;
 }
 
 // ========================================
 // History Logic
 // ========================================
 
-async function fetchFullHistory(debtorId) {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/get_historial`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'apikey': SUPABASE_ANON_KEY
-        },
-        body: JSON.stringify({ deudor_id: debtorId, pov: 'debtor' })
-    });
-
-    if (!response.ok) {
-        console.error('Failed to fetch history from Edge Function:', await response.text());
-        throw new Error('Error fetching full history');
-    }
+async function fetchFullHistory(token) {
+    const items = await pedirVisor(token, 'historial');
+    if (!items) throw new Error('Error fetching full history');
 
     // La Edge Function ahora devuelve una LISTA PLANA cronológica descendente
     // (presente → pasado), con pagos ARRIBA de las deudas que abonaron.
-    const items = await response.json();
 
     items.forEach(it => {
         it.date = new Date(it.date + 'T12:00:00');
@@ -676,7 +663,7 @@ function renderCredit(saldoFavor) {
 // ========================================
 // Navigation Logic
 let historyLoaded = false;
-let currentDebtorId = null;
+let currentToken = null;
 
 viewHistoryBtn.addEventListener('click', async () => {
     // Show View
@@ -686,10 +673,10 @@ viewHistoryBtn.addEventListener('click', async () => {
     setTimeout(() => historyView.classList.add('active'), 10);
     
     // Load Data if needed
-    if (!historyLoaded && currentDebtorId) {
+    if (!historyLoaded && currentToken) {
         historyLoadingEl.classList.remove('hidden');
         try {
-            const historyItems = await fetchFullHistory(currentDebtorId);
+            const historyItems = await fetchFullHistory(currentToken);
             renderHistory(historyItems);
             historySearchBox.classList.remove('hidden');
             historyLoaded = true;
@@ -728,10 +715,10 @@ async function init() {
         const debtor = await fetchDebtorByToken(token);
         if (!debtor) { showError(); return; }
         
-        currentDebtorId = debtor.id; // Store for lazy load
+        currentToken = token; // para cargar el historial cuando se abra
 
         // Initial Data Fetch
-        const estadoCuenta = await fetchEstadoCuenta(debtor.id);
+        const estadoCuenta = await fetchEstadoCuenta(token);
         
         // Render
         debtorNameEl.textContent = debtor.nombre;
